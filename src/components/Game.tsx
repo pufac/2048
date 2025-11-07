@@ -4,6 +4,7 @@ import { Board } from './Board';
 import { ScoreDisplay } from './ScoreDisplay';
 import { TileData } from '../types';
 import { GameOverOverlay } from './GameOverlay';
+import { Header } from './Header';
 
 const debug_tile_values: number[] = [];
 
@@ -69,13 +70,31 @@ export function Game(){
     
     const nextId = useRef(1);
 
-    const [board, setBoard] = useState<TileData[][]>([]);
+
+    const createTile = (value = 0): TileData => {
+        return {id: nextId.current++, value};
+    };
+
+    const generateEmptyBoard = (): TileData[][] => {
+        const emptyBoard: TileData[][] = [];
+        for(let i = 0; i < BOARD_SIZE; i++)
+        {
+            emptyBoard.push(Array.from({length: BOARD_SIZE}, () => createTile()));
+        }
+        return emptyBoard;
+    }
+
+    const [board, setBoard] = useState<TileData[][]>(() => generateEmptyBoard());
+
 
     const [score, setScore] = useState(0);
 
     const [isGameOver, setIsGameOver] = useState(false);
 
     const checkForGameOver = (currentBoard: TileData[][]): boolean => {
+
+        if(!currentBoard || currentBoard.length === 0) return false;
+
         //van e ures hely a tablaban
         for(let r = 0; r < BOARD_SIZE; r++)
         {
@@ -105,18 +124,9 @@ export function Game(){
         return true;
     }
 
-    const createTile = (value = 0): TileData => {
-        return {id: nextId.current++, value};
-    };
+    
 
-    const generateEmptyBoard = (): TileData[][] => {
-        const emptyBoard: TileData[][] = [];
-        for(let i = 0; i < BOARD_SIZE; i++)
-        {
-            emptyBoard.push(Array.from({length: BOARD_SIZE}, () => createTile()));
-        }
-        return emptyBoard;
-    }
+    
 
     const transpose = (b: TileData[][]): TileData[][] => {
     const newBoard = generateEmptyBoard();
@@ -135,6 +145,7 @@ export function Game(){
         startingBoard = addRandomTile(startingBoard);
         setBoard(startingBoard);
         setScore(0);
+        setIsGameOver(false);
     }
 
     useEffect(() => {
@@ -242,8 +253,6 @@ export function Game(){
         
         if (checkForGameOver(board)){
             setIsGameOver(true);
-        }else{
-            setIsGameOver(false);
         }
 
         return () => clearTimeout(timer);
@@ -309,10 +318,7 @@ export function Game(){
 
             {isGameOver && <GameOverOverlay score={score} onRestart={startGame}/>}
 
-            <div className="game-header">
-                <h1 className='title'>2048</h1>
-                <ScoreDisplay label="Score" score = {score} />
-            </div>
+            <Header score={score}/>
 
             
 

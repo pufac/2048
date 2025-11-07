@@ -1,0 +1,16 @@
+.grid-container {
+    display: grid;
+    gap: 15px;
+    background-color: #bbada0;
+    padding: 15px;
+    border-radius: 6px;
+    position: absolute;
+    z-index: 1;
+}
+
+.grid-cell {
+    width: 100px;
+    height: 100px;
+    background-color: rgba(238, 228, 218, 0.35);
+    border-radius: 3px;
+}
