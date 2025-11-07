@@ -1,8 +1,9 @@
 import './css/Board.css'
 import { Tile } from './Tile'
+import { TileData } from '../types';
 
 type BoardProperties = {
-    board: number[][];
+    board: TileData[][];
     size: number;
 }
 
@@ -16,14 +17,11 @@ export function Board ({board, size} : BoardProperties)
     return (
         <div className='board' style={boardStyle}>
             {
-                board.map((row, rowIndex) => (
-                    row.map((cellValue, colIndex) => 
-                    <Tile
-                        key={`tile-${rowIndex}-${colIndex}`}
-                        value={cellValue}
-                    />
+                board.map((row) => (
+                    row.map((tile) => (
+                        <Tile key={tile.id} tile={tile}/>
                     ))
-                )
+                ))
             }
         </div>
     );

@@ -2,6 +2,7 @@ import './css/Game.css'
 import { useState, useEffect, useRef } from 'react';
 import { Board } from './Board';
 import { ScoreDisplay } from './ScoreDisplay';
+import { TileData } from '../types';
 
 const debug_tile_values: number[] = [];
 
@@ -12,29 +13,29 @@ for(let i = 1; i <= 20; i++)
     debug_tile_values.push(Math.pow(2,i));
 }
 
-const handleSmallestTileRemoval = (board: number[][], newTileValue: number): number[][] => {
+const handleSmallestTileRemoval = (board: TileData[][], newTileValue: number): TileData[][] => {
     let smallest = Infinity;
     board.forEach(row => {
         row.forEach(cell => {
-            if(cell > 0 && cell < smallest)
+            if(cell.value > 0 && cell.value < smallest)
             {
-                smallest = cell;
+                smallest = cell.value;
             }
         })
     });
 
     if(smallest === Infinity) return board;
 
-    if(newTileValue > smallest && smallest < 256)
+    if(newTileValue > smallest && smallest >= 256)
     {
         let found = false;
 
         const boardAfterClear = board.map(row => {
             return row.map(cell => {
-                if(!found && cell === smallest)
+                if(!found && cell.value === smallest)
                 {
                     found = true;
-                    return 0;
+                    return {...cell, value:0};
                 }
                 return cell;
             });
@@ -76,31 +77,53 @@ const fillRow = (row: number[]): number[] => {
     return newRow;
 }
 
-const transpose = (board:number[][]): number[][] => {
-    const newBoard = Array.from({length:BOARD_SIZE}, () => Array(BOARD_SIZE).fill(0));
+
+
+
+
+export function Game(){
+    
+    const nextId = useRef(1);
+
+    const [board, setBoard] = useState<TileData[][]>([]);
+
+    const [score, setScore] = useState(0);
+
+    const createTile = (value = 0): TileData => {
+        return {id: nextId.current++, value};
+    };
+
+    const generateEmptyBoard = (): TileData[][] => {
+        const emptyBoard: TileData[][] = [];
+        for(let i = 0; i < BOARD_SIZE; i++)
+        {
+            emptyBoard.push(Array.from({length: BOARD_SIZE}, () => createTile()));
+        }
+        return emptyBoard;
+    }
+
+    const transpose = (b: TileData[][]): TileData[][] => {
+    const newBoard = generateEmptyBoard();
     for(let i = 0; i<BOARD_SIZE; i++){
         for (let j = 0; j < BOARD_SIZE; j++)
         {
-            newBoard[i][j] = board[j][i];
+            newBoard[i][j] = b[j][i];
         }
     }
     return newBoard;
 }
 
-const generateEmptyBoard = (): number[][] => {
-    return Array.from({length: BOARD_SIZE}, () => Array(BOARD_SIZE).fill(0));
-}
+    const startGame = () => {
+        let startingBoard = generateEmptyBoard();
+        startingBoard = addRandomTile(startingBoard);
+        startingBoard = addRandomTile(startingBoard);
+        setBoard(startingBoard);
+        setScore(0);
+    }
 
-export function Game(){
-    
-    const [board, setBoard] = useState(() => {
-        const initialBoard = generateEmptyBoard();
-        initialBoard[0][1] = 2;
-        initialBoard[2][2] = 4;
-        return initialBoard;
-    })
-
-    const [score, setScore] = useState(0);
+    useEffect(() => {
+        startGame();
+    },[]);
 
     const mergeRow = (row:number[]): number[] => {
         const newRow = [];
@@ -123,105 +146,125 @@ export function Game(){
     const playerMoved = useRef(false);
     
     const makeMove = (direction: 'left' | 'right' | 'up' | 'down') => {
-        setBoard(currentBoard => {
-            let processedBoard: number[][] = currentBoard;
-            let boardChanged = false;
+        let currentBoard = board;
 
-            switch (direction) {
-                case 'left':
-                    processedBoard = currentBoard.map(row => {
-                         const originalRowJSON = JSON.stringify(row);
-                         const compressed = compressRow(row);
-                         const merged = mergeRow(compressed);
-                         const filled = fillRow(merged);
-                         if (originalRowJSON !== JSON.stringify(filled)) {
-                             boardChanged = true;
-                         }
-                         return filled;
-                    });
-                    break;
-                case 'right':
-                     processedBoard = currentBoard.map(row => {
-                         const originalRowJSON = JSON.stringify(row);
-                         const reversedRow = [...row].reverse(); // Másolaton dolgozunk!
-                         const compressed = compressRow(reversedRow);
-                         const merged = mergeRow(compressed);
-                         const filled = fillRow(merged);
-                         const finalRow = filled.reverse();
-                         if (originalRowJSON !== JSON.stringify(finalRow)) {
-                             boardChanged = true;
-                         }
-                         return finalRow;
-                    });
-                    break;
-                case 'up':
-                    { const transposedUp = transpose(currentBoard);
-                    const movedUp = transposedUp.map(row => {
-                        const originalRowJSON = JSON.stringify(row);
-                        const compressed = compressRow(row);
-                        const merged = mergeRow(compressed);
-                        const filled = fillRow(merged);
-                        if (originalRowJSON !== JSON.stringify(filled)) {
-                            boardChanged = true;
-                        }
-                        return filled;
-                    });
-                    processedBoard = transpose(movedUp);
-                    break; }
-                case 'down':
-                    { const transposedDown = transpose(currentBoard);
-                    const movedDown = transposedDown.map(row => {
-                        const originalRowJSON = JSON.stringify(row);
-                        const reversedRow = [...row].reverse();
-                        const compressed = compressRow(reversedRow);
-                        const merged = mergeRow(compressed);
-                        const filled = fillRow(merged);
-                        const finalRow = filled.reverse();
-                         if (originalRowJSON !== JSON.stringify(finalRow)) {
-                            boardChanged = true;
-                        }
-                        return finalRow;
-                    });
-                    processedBoard = transpose(movedDown);
-                    break; }
-            }
-
-            if (boardChanged) {
-                playerMoved.current = true;
-                return processedBoard;
-            }
-
-            return currentBoard;
-        });
-    }
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-        switch (event.key) {
-            case 'ArrowLeft':
-                makeMove('left');
-                break;
-            case 'ArrowRight':
-                makeMove('right');
-                break;
-            case 'ArrowUp':
-                makeMove('up');
-                break;
-            case 'ArrowDown':
-                makeMove('down');
-                break;
+        if(direction === 'up' || direction === 'down'){
+            currentBoard = transpose(currentBoard);
         }
 
+        let newScore = score;
+        let boardChanged = false;
+
+        const newBoard = currentBoard.map(row => {
+            let newRow = [...row];
+
+            if(direction === 'right' || direction === 'down'){
+                newRow.reverse();
+            }
+
+            let compressedRow = newRow.filter(tile => tile.value !== 0);
+
+            let mergedRow: TileData[] = [];
+            for (let i = 0; i < compressedRow.length; i++)
+            {
+                if (i < compressedRow.length - 1 && compressedRow[i].value === compressedRow[i+1].value)
+                {
+                    const mergedValue = compressedRow[i].value * 2;
+                    newScore += mergedValue;
+                    mergedRow.push({...createTile(mergedValue), isMerged: true});
+                    i++;
+                    boardChanged = true;
+                }else{
+                    mergedRow.push(compressedRow[i]);
+                }
+            }
+
+            if(JSON.stringify(newRow) !== JSON.stringify(mergedRow.concat(Array(newRow.length - mergedRow.length).fill(null))))
+            {
+                boardChanged = true;
+            }
+
+            while(mergedRow.length < BOARD_SIZE){
+                mergedRow.push(createTile());
+            }
+
+            if(direction === 'right' || direction === 'down')
+            {
+                mergedRow.reverse();
+            }
+
+            return mergedRow;
+        });
+
+        if(boardChanged)
+        {
+            let finalBoard = newBoard;
+            if(direction === 'up' || direction === 'down'){
+                finalBoard = transpose(finalBoard);
+            }
+
+            finalBoard = addRandomTile(finalBoard);
+
+            setScore(newScore);
+            setBoard(finalBoard);
+        }
     };
 
     useEffect(() => {
-        window.addEventListener('keydown',handleKeyDown);
-        console.log("added event listener");
+        const timer = setTimeout(() => {
+            const cleanedBoard = board.map(row => 
+                row.map(tile => ({
+                    ...tile,
+                    isNew: undefined,
+                    isMerged: undefined,
+                }))
+            );
+            if(JSON.stringify(board) !== JSON.stringify(cleanedBoard)) {
+                setBoard(cleanedBoard);
+            }
+        },200);
+        
+        return () => clearTimeout(timer);
+    }, [board]);
 
-        return () => {
-            window.removeEventListener('keydown',handleKeyDown);
+    const addRandomTile = (currentBoard: TileData[][]): TileData[][] => {
+        const emptySpots: {r: number, c: number}[] = [];
+        currentBoard.forEach((row,r) => {
+            row.forEach((tile,c) => {
+                if(tile.value === 0) emptySpots.push({r,c});
+            });
+        });
+
+        if(emptySpots.length > 0)
+        {
+            const spot = emptySpots[Math.floor(Math.random() * emptySpots.length)];
+            
+            const maxTile = currentBoard.flat().reduce((max, cell) => Math.max(max, cell.value),0);
+
+            const valueToSpawn = getNewSpawnValue(maxTile);
+            
+            let newBoard = currentBoard.map(r => r.map(c => ({...c})));
+            newBoard[spot.r][spot.c] = {...createTile(valueToSpawn), isNew: true};
+            newBoard = handleSmallestTileRemoval(newBoard, valueToSpawn);
+            return newBoard;
+        }
+
+        return currentBoard;
+    }
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            switch (e.key) {
+                case 'ArrowLeft': makeMove('left'); break;
+                case 'ArrowRight': makeMove('right'); break;
+                case 'ArrowUp': makeMove('up'); break;
+                case 'ArrowDown': makeMove('down'); break;
+            }
         };
-    },[]);
-
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [board]);
+/*
     useEffect(() => {
         console.log("new tile use effect");
         if(playerMoved.current)
@@ -240,50 +283,22 @@ export function Game(){
             addNewTile(getNewSpawnValue(maxTile));
         }
     }, [board])
+*/
 
+    const addNewTileDebug = (value: number) => {
+        const emptySpots: { r: number, c: number }[] = [];
+        board.forEach((r, rIndex) => r.forEach((c, cIndex) => {
+            if (c.value === 0) emptySpots.push({ r: rIndex, c: cIndex });
+        }));
 
-    const addNewTile = (value?: number) => {
-    setBoard(currentBoard => { // 1. Funkcionális frissítés: Mindig a legfrissebb táblát kapjuk!
-        
-        // 2. Határozzuk meg a spawnolandó értéket
-        let valueToSpawn: number;
-        if (value) {
-            // Ha kaptunk értéket (debug gomb), azt használjuk
-            valueToSpawn = value;
-        } else {
-            // Ha nem (játékmenet), akkor számoljuk ki
-            const maxTile = currentBoard.flat().reduce((max, cell) => Math.max(max, cell), 0);
-            valueToSpawn = getNewSpawnValue(maxTile);
+        if (emptySpots.length > 0) {
+            const spot = emptySpots[Math.floor(Math.random() * emptySpots.length)];
+            let newBoard = board.map(r => r.map(c => ({...c})));
+            newBoard[spot.r][spot.c] = { ...createTile(value), isNew: true };
+            newBoard = handleSmallestTileRemoval(newBoard, value);
+            setBoard(newBoard);
         }
-
-        // 3. Keressünk üres helyet (a logika ugyanaz)
-        const emptyTiles: { row: number, col: number }[] = [];
-        currentBoard.forEach((row, rowIndex) => {
-            row.forEach((cell, colIndex) => {
-                if (cell === 0) {
-                    emptyTiles.push({ row: rowIndex, col: colIndex });
-                }
-            });
-        });
-
-        // Ha nincs üres hely, nem csinálunk semmit, visszaadjuk a régi táblát
-        if (emptyTiles.length === 0) {
-            return currentBoard;
-        }
-
-        const randomIndex = Math.floor(Math.random() * emptyTiles.length);
-        const randomTile = emptyTiles[randomIndex];
-
-        // 4. Hozzáadjuk az új lapkát és lefuttatjuk a takarítást
-        const newBoardWithTile = currentBoard.map(row => [...row]);
-        newBoardWithTile[randomTile.row][randomTile.col] = valueToSpawn;
-
-        const finalBoard = handleSmallestTileRemoval(newBoardWithTile, valueToSpawn);
-
-        // 5. Visszaadjuk a végső táblát a Reactnek
-        return finalBoard;
-    });
-};
+    };
     
     return (
         <div className='game-container'>
@@ -297,7 +312,7 @@ export function Game(){
             <div className="debug-controls">
                 <span>Debug</span>
                 {debug_tile_values.map(value => (
-                    <button key={`debug-btn-${value}`} onClick={() => addNewTile(value)}>{value}</button>
+                    <button key={`debug-btn-${value}`} onClick={() => addNewTileDebug(value)}>{value}</button>
                 ))}
             </div>
         </div>
