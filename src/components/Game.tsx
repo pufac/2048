@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Board } from './Board';
 import { ScoreDisplay } from './ScoreDisplay';
 import { TileData } from '../types';
+import { GameOverOverlay } from './GameOverlay';
 
 const debug_tile_values: number[] = [];
 
@@ -63,23 +64,6 @@ const getNewSpawnValue = (maxTile: number): number => {
     return Math.random() < 0.9 ? 2 : 4;
 }
 
-const compressRow = (row: number[]): number[] => {
-    return row.filter(cell => cell !== 0);
-};
-
-
-
-const fillRow = (row: number[]): number[] => {
-    const newRow = [...row];
-    while(newRow.length < BOARD_SIZE){
-        newRow.push(0);
-    }
-    return newRow;
-}
-
-
-
-
 
 export function Game(){
     
@@ -88,6 +72,38 @@ export function Game(){
     const [board, setBoard] = useState<TileData[][]>([]);
 
     const [score, setScore] = useState(0);
+
+    const [isGameOver, setIsGameOver] = useState(false);
+
+    const checkForGameOver = (currentBoard: TileData[][]): boolean => {
+        //van e ures hely a tablaban
+        for(let r = 0; r < BOARD_SIZE; r++)
+        {
+            for(let c = 0; c < BOARD_SIZE; c++)
+            {
+                if(currentBoard[r][c].value === 0) return false;
+            }
+        }
+
+        //ha nincs hely, akkor van még mozgás?
+        for (let r = 0; r < BOARD_SIZE; r++) {
+            for (let c = 0; c < BOARD_SIZE; c++) {
+                const currentTileValue = currentBoard[r][c].value;
+
+                if(c < BOARD_SIZE - 1 && currentTileValue === currentBoard[r][c+1].value)
+                {
+                    return false;
+                }
+
+                if(r < BOARD_SIZE - 1 && currentTileValue === currentBoard[r+1][c].value)
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
 
     const createTile = (value = 0): TileData => {
         return {id: nextId.current++, value};
@@ -224,6 +240,12 @@ export function Game(){
             }
         },200);
         
+        if (checkForGameOver(board)){
+            setIsGameOver(true);
+        }else{
+            setIsGameOver(false);
+        }
+
         return () => clearTimeout(timer);
     }, [board]);
 
@@ -254,6 +276,7 @@ export function Game(){
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            if(isGameOver) return;
             switch (e.key) {
                 case 'ArrowLeft': makeMove('left'); break;
                 case 'ArrowRight': makeMove('right'); break;
@@ -263,27 +286,8 @@ export function Game(){
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [board]);
-/*
-    useEffect(() => {
-        console.log("new tile use effect");
-        if(playerMoved.current)
-        {
-            playerMoved.current = false;
+    }, [board, isGameOver]);
 
-            let maxTile = 0;
-            board.forEach(row => {
-                row.forEach(cell => {
-                    if(cell > maxTile) {
-                        maxTile = cell;
-                    }
-                })
-            });
-
-            addNewTile(getNewSpawnValue(maxTile));
-        }
-    }, [board])
-*/
 
     const addNewTileDebug = (value: number) => {
         const emptySpots: { r: number, c: number }[] = [];
@@ -302,10 +306,15 @@ export function Game(){
     
     return (
         <div className='game-container'>
+
+            {isGameOver && <GameOverOverlay score={score} onRestart={startGame}/>}
+
             <div className="game-header">
                 <h1 className='title'>2048</h1>
                 <ScoreDisplay label="Score" score = {score} />
             </div>
+
+            
 
             <Board board={board} size={BOARD_SIZE}/>
 
