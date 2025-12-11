@@ -3,4 +3,5 @@ export type TileData = {
     value: number;
     isNew?: boolean;
     isMerged?: boolean;
+    isJoker?: boolean;
 };

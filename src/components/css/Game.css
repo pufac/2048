@@ -23,16 +23,25 @@
     background-color: #9e8b77;
 }
 
-.debug-controls{
-    margin-top: 20px;
+.game-content-wrapper {
     display: flex;
+    flex-direction: row;
+    justify-content: center; 
+    align-items: flex-start;
+    gap: 20px;
     flex-wrap: wrap;
-    gap: 10px;
-    align-items: center;
-    justify-content: center;
-    background-color: #3d4a36;
-    padding: 10px;
+    width: 100%;
+}
+.debug-controls {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); 
+    gap: 8px;
+    
+    background-color: #bbada0;
+    padding: 15px;
     border-radius: 6px;
+    max-height: 590px;
+    overflow-y: auto;
 }
 
 .debug-controls span{
@@ -55,5 +64,22 @@
 
 .debug-controls button:hover{
     background-color: #9e8b77;
+}
+
+.debug-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #776e65;
+    font-weight: bold;
+    cursor: pointer;
+    user-select: none;
+    margin-bottom: 10px;
+}
+
+.debug-toggle input {
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
 }
 
